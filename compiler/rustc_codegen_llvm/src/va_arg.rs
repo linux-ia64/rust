@@ -1174,6 +1174,17 @@ pub(super) fn emit_va_arg<'ll, 'tcx>(
             AllowHigherAlign::Yes,
             ForceRightAdjust::No,
         ),
+        // IA-64 SysV: 8-byte argument slots, little-endian. Provisional cut for the
+        // bring-up; the exact c-variadic slot rules are revisited in Phase 2.
+        Arch::IA64 => emit_ptr_va_arg(
+            bx,
+            addr,
+            target_ty,
+            if target_ty_size > 2 * 8 { PassMode::Indirect } else { PassMode::Direct },
+            SlotSize::Bytes8,
+            AllowHigherAlign::Yes,
+            ForceRightAdjust::No,
+        ),
 
         Arch::Bpf => bug!("bpf does not support c-variadic functions"),
         Arch::SpirV => bug!("spirv does not support c-variadic functions"),

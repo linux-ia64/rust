@@ -1055,6 +1055,7 @@ symbols! {
         i64,
         i128,
         i128_type,
+        ia64,
         ident,
         if_let,
         if_let_guard,

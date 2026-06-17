@@ -9,6 +9,7 @@ use std::str::SplitWhitespace;
 use shlex::Shlex;
 
 const OPTIONAL_COMPONENTS: &[&str] = &[
+    "ia64",
     "x86",
     "arm",
     "aarch64",

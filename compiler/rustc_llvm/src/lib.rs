@@ -199,6 +199,15 @@ pub fn initialize_available_targets() {
         LLVMInitializeSparcAsmPrinter,
         LLVMInitializeSparcAsmParser
     );
+    // IA-64: the fork has no integrated assembler/disassembler, so only the
+    // text-emitting components exist (no AsmParser).
+    init_target!(
+        llvm_component = "ia64",
+        LLVMInitializeIA64TargetInfo,
+        LLVMInitializeIA64Target,
+        LLVMInitializeIA64TargetMC,
+        LLVMInitializeIA64AsmPrinter
+    );
     init_target!(
         llvm_component = "nvptx",
         LLVMInitializeNVPTXTargetInfo,

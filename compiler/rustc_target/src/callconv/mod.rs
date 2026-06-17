@@ -16,6 +16,7 @@ mod avr;
 mod bpf;
 mod csky;
 mod hexagon;
+mod ia64;
 mod loongarch;
 mod m68k;
 mod mips;
@@ -703,6 +704,7 @@ impl<'a, Ty> FnAbi<'a, Ty> {
                 }
             }
             Arch::Hexagon => hexagon::compute_abi_info(cx, self),
+            Arch::IA64 => ia64::compute_abi_info(cx, self),
             Arch::Xtensa => xtensa::compute_abi_info(cx, self),
             Arch::RiscV32 | Arch::RiscV64 => riscv::compute_abi_info(cx, self),
             Arch::Wasm32 | Arch::Wasm64 => wasm::compute_abi_info(cx, self),

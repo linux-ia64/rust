@@ -1475,6 +1475,7 @@ supported_targets! {
     ("s390x-unknown-linux-musl", s390x_unknown_linux_musl),
     ("sparc-unknown-linux-gnu", sparc_unknown_linux_gnu),
     ("sparc64-unknown-linux-gnu", sparc64_unknown_linux_gnu),
+    ("ia64-unknown-linux-gnu", ia64_unknown_linux_gnu),
     ("arm-unknown-linux-gnueabi", arm_unknown_linux_gnueabi),
     ("arm-unknown-linux-gnueabihf", arm_unknown_linux_gnueabihf),
     ("armeb-unknown-linux-gnueabi", armeb_unknown_linux_gnueabi),
@@ -1889,6 +1890,7 @@ crate::target_spec_enum! {
         Bpf = "bpf",
         CSky = "csky",
         Hexagon = "hexagon",
+        IA64 = "ia64",
         LoongArch32 = "loongarch32",
         LoongArch64 = "loongarch64",
         M68k = "m68k",
@@ -1926,6 +1928,7 @@ impl Arch {
             Self::Bpf => sym::bpf,
             Self::CSky => sym::csky,
             Self::Hexagon => sym::hexagon,
+            Self::IA64 => sym::ia64,
             Self::LoongArch32 => sym::loongarch32,
             Self::LoongArch64 => sym::loongarch64,
             Self::M68k => sym::m68k,
@@ -1958,10 +1961,10 @@ impl Arch {
 
         match self {
             AArch64 | RiscV32 | RiscV64 => true,
-            AmdGpu | Arm | Arm64EC | Avr | Bpf | CSky | Hexagon | LoongArch32 | LoongArch64
-            | M68k | Mips | Mips32r6 | Mips64 | Mips64r6 | Msp430 | Nvptx64 | PowerPC
-            | PowerPC64 | S390x | Sparc | Sparc64 | SpirV | Wasm32 | Wasm64 | X86 | X86_64
-            | Xtensa | Other(_) => false,
+            AmdGpu | Arm | Arm64EC | Avr | Bpf | CSky | Hexagon | IA64 | LoongArch32
+            | LoongArch64 | M68k | Mips | Mips32r6 | Mips64 | Mips64r6 | Msp430 | Nvptx64
+            | PowerPC | PowerPC64 | S390x | Sparc | Sparc64 | SpirV | Wasm32 | Wasm64 | X86
+            | X86_64 | Xtensa | Other(_) => false,
         }
     }
 }
@@ -2220,7 +2223,7 @@ impl Target {
             AArch64 | AmdGpu | Arm | Arm64EC | Avr | CSky | Hexagon | LoongArch32 | LoongArch64
             | M68k | Mips | Mips32r6 | Mips64 | Mips64r6 | Msp430 | Nvptx64 | PowerPC
             | PowerPC64 | RiscV32 | RiscV64 | S390x | Sparc | Sparc64 | Wasm32 | Wasm64 | X86
-            | X86_64 | Xtensa => true,
+            | X86_64 | Xtensa | IA64 => true,
         }
     }
 }
@@ -3814,7 +3817,11 @@ impl Target {
             Arch::LoongArch64 => (Architecture::LoongArch64, None),
             Arch::CSky => (Architecture::Csky, None),
             Arch::Arm64EC => (Architecture::Aarch64, Some(object::SubArchitecture::Arm64EC)),
-            Arch::AmdGpu
+            // IA-64: the `object` crate has no `Architecture::Ia64` variant, so we
+            // cannot build a native metadata object here. Phase 3 (rlibs) will need
+            // `object` patched to add EM_IA_64 (=50). See rust_bringup.html.
+            Arch::IA64
+            | Arch::AmdGpu
             | Arch::Nvptx64
             | Arch::SpirV
             | Arch::Wasm32
