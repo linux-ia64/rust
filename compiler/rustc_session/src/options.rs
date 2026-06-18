@@ -2087,6 +2087,9 @@ options! {
     ar: String = (String::new(), parse_string, [UNTRACKED],
         "this option is deprecated and does nothing",
         removed: Warn),
+    assembler: Option<PathBuf> = (None, parse_opt_pathbuf, [UNTRACKED],
+        "external assembler to use for targets without an integrated assembler \
+        (default: `<target-triple>-as`)"),
     #[rustc_lint_opt_deny_field_access("use `Session::code_model` instead of this field")]
     code_model: Option<CodeModel> = (None, parse_code_model, [TRACKED],
         "choose the code model to use (`rustc --print code-models` for details)"),

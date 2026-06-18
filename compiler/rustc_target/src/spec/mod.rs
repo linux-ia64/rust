@@ -2347,6 +2347,16 @@ pub struct TargetOptions {
     /// Extra arguments to pass to the external assembler (when used)
     pub asm_args: StaticCow<[StaticCow<str>]>,
 
+    /// Whether this target cannot emit object files via LLVM's integrated assembler
+    /// and must instead emit assembly text and invoke an external assembler (like
+    /// clang's `-fno-integrated-as`). Used by the IA-64 backend, whose LLVM target
+    /// has no MC object writer; objects are produced by GNU `as`.
+    pub need_external_assembler: bool,
+    /// External assembler program to invoke when `need_external_assembler` is set.
+    /// `None` means derive `<target-triple>-as` (clang-style), found on `PATH`. Can be
+    /// overridden on the command line with `-Cassembler=<path>`.
+    pub assembler: Option<StaticCow<str>>,
+
     /// Default CPU to pass to LLVM. Corresponds to `llc -mcpu=$cpu`. Defaults
     /// to "generic".
     pub cpu: StaticCow<str>,
@@ -2808,6 +2818,8 @@ impl Default for TargetOptions {
             linker_is_gnu_json: true,
             link_script: None,
             asm_args: cvs![],
+            need_external_assembler: false,
+            assembler: None,
             cpu: "generic".into(),
             need_explicit_cpu: false,
             features: "".into(),

@@ -2,14 +2,15 @@ use std::ffi::{CStr, CString};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::process::Command;
 use std::{fs, slice, str};
 
 use libc::{c_char, c_int, c_void, size_t};
 use rustc_codegen_ssa::back::link::ensure_removed;
 use rustc_codegen_ssa::back::versioned_llvm_target;
 use rustc_codegen_ssa::back::write::{
-    BitcodeSection, CodegenContext, EmitObj, InlineAsmError, ModuleConfig, SharedEmitter,
-    TargetMachineFactoryConfig, TargetMachineFactoryFn,
+    AssemblerCommand, BitcodeSection, CodegenContext, EmitObj, InlineAsmError, ModuleConfig,
+    SharedEmitter, TargetMachineFactoryConfig, TargetMachineFactoryFn,
 };
 use rustc_codegen_ssa::base::wants_wasm_eh;
 use rustc_codegen_ssa::common::TypeKind;
@@ -35,8 +36,8 @@ use crate::builder::SBuilder;
 use crate::builder::gpu_offload::scalar_width;
 use crate::common::AsCCharPtr;
 use crate::errors::{
-    CopyBitcode, FromLlvmDiag, FromLlvmOptimizationDiag, LlvmError, ParseTargetMachineConfig,
-    UnsupportedCompression, WithLlvmError, WriteBytecode,
+    AssemblerFailed, AssemblerSpawnFailed, CopyBitcode, FromLlvmDiag, FromLlvmOptimizationDiag,
+    LlvmError, ParseTargetMachineConfig, UnsupportedCompression, WithLlvmError, WriteBytecode,
 };
 use crate::llvm::diagnostic::OptimizationDiagnosticKind::*;
 use crate::llvm::{self, DiagnosticInfo};
@@ -98,6 +99,30 @@ fn write_output_file<'ll>(
     }
 
     result.into_result().unwrap_or_else(|()| llvm_err(dcx, LlvmError::WriteOutput { path: output }))
+}
+
+/// Assemble `asm` (a `.s` file emitted by LLVM) into the object file `obj` by invoking an
+/// external assembler. Used for targets without an integrated assembler (e.g. IA-64).
+fn run_assembler(dcx: DiagCtxtHandle<'_>, assembler: &AssemblerCommand, asm: &Path, obj: &Path) {
+    let mut cmd = Command::new(&assembler.program);
+    cmd.args(&assembler.args).arg(asm).arg("-o").arg(obj);
+    debug!("running external assembler: {:?}", cmd);
+    match cmd.output() {
+        Ok(output) => {
+            if !output.status.success() {
+                let mut msg = String::from_utf8_lossy(&output.stderr).into_owned();
+                msg.push_str(&String::from_utf8_lossy(&output.stdout));
+                dcx.emit_fatal(AssemblerFailed {
+                    assembler: &assembler.program,
+                    status: output.status.to_string(),
+                    output: msg,
+                });
+            }
+        }
+        Err(err) => {
+            dcx.emit_fatal(AssemblerSpawnFailed { assembler: &assembler.program, err });
+        }
+    }
 }
 
 pub(crate) fn create_informational_target_machine(
@@ -1136,34 +1161,58 @@ pub(crate) fn codegen(
                 let _timer =
                     prof.generic_activity_with_arg("LLVM_module_codegen_emit_obj", &*module.name);
 
-                let dwo_out = cgcx
-                    .output_filenames
-                    .temp_path_dwo_for_cgu(&module.name, cgcx.invocation_temp.as_deref());
-                let dwo_out = match (cgcx.split_debuginfo, cgcx.split_dwarf_kind) {
-                    // Don't change how DWARF is emitted when disabled.
-                    (SplitDebuginfo::Off, _) => None,
-                    // Don't provide a DWARF object path if split debuginfo is enabled but this is
-                    // a platform that doesn't support Split DWARF.
-                    _ if !cgcx.target_can_use_split_dwarf => None,
-                    // Don't provide a DWARF object path in single mode, sections will be written
-                    // into the object as normal but ignored by linker.
-                    (_, SplitDwarfKind::Single) => None,
-                    // Emit (a subset of the) DWARF into a separate dwarf object file in split
-                    // mode.
-                    (_, SplitDwarfKind::Split) => Some(dwo_out.as_path()),
-                };
+                if let Some(assembler) = &cgcx.assembler_cmd {
+                    // This target has no integrated assembler (the LLVM backend can only
+                    // emit assembly text), so emit a `.s` and run an external assembler
+                    // (e.g. GNU `as`) to produce the object file. Split DWARF is not
+                    // supported on this path.
+                    let asm_out =
+                        cgcx.output_filenames.temp_path_ext_for_cgu("external-as.s", &module.name, None);
+                    write_output_file(
+                        dcx,
+                        tm.raw(),
+                        config.no_builtins,
+                        llmod,
+                        &asm_out,
+                        None,
+                        llvm::FileType::AssemblyFile,
+                        prof,
+                        config.verify_llvm_ir,
+                    );
+                    run_assembler(dcx, assembler, &asm_out, &obj_out);
+                    if !cgcx.save_temps {
+                        ensure_removed(dcx, &asm_out);
+                    }
+                } else {
+                    let dwo_out = cgcx
+                        .output_filenames
+                        .temp_path_dwo_for_cgu(&module.name, cgcx.invocation_temp.as_deref());
+                    let dwo_out = match (cgcx.split_debuginfo, cgcx.split_dwarf_kind) {
+                        // Don't change how DWARF is emitted when disabled.
+                        (SplitDebuginfo::Off, _) => None,
+                        // Don't provide a DWARF object path if split debuginfo is enabled but this is
+                        // a platform that doesn't support Split DWARF.
+                        _ if !cgcx.target_can_use_split_dwarf => None,
+                        // Don't provide a DWARF object path in single mode, sections will be written
+                        // into the object as normal but ignored by linker.
+                        (_, SplitDwarfKind::Single) => None,
+                        // Emit (a subset of the) DWARF into a separate dwarf object file in split
+                        // mode.
+                        (_, SplitDwarfKind::Split) => Some(dwo_out.as_path()),
+                    };
 
-                write_output_file(
-                    dcx,
-                    tm.raw(),
-                    config.no_builtins,
-                    llmod,
-                    &obj_out,
-                    dwo_out,
-                    llvm::FileType::ObjectFile,
-                    prof,
-                    config.verify_llvm_ir,
-                );
+                    write_output_file(
+                        dcx,
+                        tm.raw(),
+                        config.no_builtins,
+                        llmod,
+                        &obj_out,
+                        dwo_out,
+                        llvm::FileType::ObjectFile,
+                        prof,
+                        config.verify_llvm_ir,
+                    );
+                }
             }
 
             EmitObj::Bitcode => {

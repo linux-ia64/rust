@@ -114,6 +114,8 @@ impl Target {
 
         forward!(link_env_remove);
         forward!(asm_args);
+        forward!(need_external_assembler);
+        forward_opt!(assembler);
         forward!(cpu);
         forward!(need_explicit_cpu);
         forward!(features);
@@ -318,6 +320,8 @@ impl ToJson for Target {
         target_option_val!(env - link_env);
         target_option_val!(link_env_remove);
         target_option_val!(asm_args);
+        target_option_val!(need_external_assembler);
+        target_option_val!(assembler);
         target_option_val!(cpu);
         target_option_val!(need_explicit_cpu);
         target_option_val!(features);
@@ -541,6 +545,8 @@ struct TargetSpecJson {
     link_env: Option<Vec<StaticCow<str>>>,
     link_env_remove: Option<StaticCow<[StaticCow<str>]>>,
     asm_args: Option<StaticCow<[StaticCow<str>]>>,
+    need_external_assembler: Option<bool>,
+    assembler: Option<StaticCow<str>>,
     cpu: Option<StaticCow<str>>,
     need_explicit_cpu: Option<bool>,
     features: Option<StaticCow<str>>,

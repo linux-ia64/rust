@@ -181,6 +181,23 @@ pub(crate) struct CopyBitcode {
 }
 
 #[derive(Diagnostic)]
+#[diag("could not exec the external assembler `{$assembler}`: {$err}")]
+#[help("the assembler defaults to `<target-triple>-as`; set it with `-Cassembler=<path>`")]
+pub(crate) struct AssemblerSpawnFailed<'a> {
+    pub assembler: &'a Path,
+    pub err: std::io::Error,
+}
+
+#[derive(Diagnostic)]
+#[diag("external assembler `{$assembler}` failed with {$status}")]
+#[note("{$output}")]
+pub(crate) struct AssemblerFailed<'a> {
+    pub assembler: &'a Path,
+    pub status: String,
+    pub output: String,
+}
+
+#[derive(Diagnostic)]
 #[diag(
     "unsupported debuginfo compression algorithm {$algorithm} - will fall back to uncompressed debuginfo"
 )]

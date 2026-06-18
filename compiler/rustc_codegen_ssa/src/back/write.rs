@@ -311,6 +311,15 @@ pub type TargetMachineFactoryFn<B> = Arc<
         + Sync,
 >;
 
+/// How to invoke an external assembler for targets without an integrated assembler
+/// (e.g. IA-64, whose LLVM backend has no MC object writer). The backend emits assembly
+/// and runs `program asm_args <in.s> -o <out.o>` to produce the object file.
+#[derive(Clone, Debug, Encodable, Decodable)]
+pub struct AssemblerCommand {
+    pub program: PathBuf,
+    pub args: Vec<String>,
+}
+
 /// Additional resources used by optimize_and_codegen (not module specific)
 #[derive(Clone, Encodable, Decodable)]
 pub struct CodegenContext {
@@ -338,6 +347,10 @@ pub struct CodegenContext {
     pub split_debuginfo: rustc_target::spec::SplitDebuginfo,
     pub split_dwarf_kind: rustc_session::config::SplitDwarfKind,
     pub pointer_size: Size,
+    /// Set for targets that must produce object files via an external assembler
+    /// (the LLVM backend can only emit assembly). `None` means use LLVM's
+    /// integrated assembler as normal.
+    pub assembler_cmd: Option<Arc<AssemblerCommand>>,
 
     /// LLVM optimizations for which we want to print remarks.
     pub remark: Passes,
@@ -1291,6 +1304,22 @@ fn start_executing_work<B: ExtraBackendMethods>(
         None
     };
 
+    // For targets without an integrated assembler (the LLVM backend can only emit
+    // assembly), resolve the external assembler to invoke. Resolution order:
+    // `-Cassembler` override, then the target's explicit `assembler`, then the
+    // clang-style default `<target-triple>-as`.
+    let assembler_cmd = sess.target.need_external_assembler.then(|| {
+        let program = if let Some(path) = &sess.opts.cg.assembler {
+            path.clone()
+        } else if let Some(assembler) = &sess.target.assembler {
+            PathBuf::from(assembler.to_string())
+        } else {
+            PathBuf::from(format!("{}-as", sess.opts.target_triple.tuple()))
+        };
+        let args = sess.target.asm_args.iter().map(|a| a.to_string()).collect();
+        Arc::new(AssemblerCommand { program, args })
+    });
+
     let cgcx = CodegenContext {
         crate_types: tcx.crate_types().to_vec(),
         lto: sess.lto(),
@@ -1319,6 +1348,7 @@ fn start_executing_work<B: ExtraBackendMethods>(
         parallel: backend.supports_parallel() && !sess.opts.unstable_opts.no_parallel_backend,
         pointer_size: tcx.data_layout.pointer_size(),
         invocation_temp: sess.invocation_temp.clone(),
+        assembler_cmd,
     };
 
     // This is the "main loop" of parallel work happening for parallel codegen.
