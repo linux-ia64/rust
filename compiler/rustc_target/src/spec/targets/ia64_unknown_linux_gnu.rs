@@ -6,6 +6,10 @@ pub(crate) fn target() -> Target {
     // EH landing-pad lowering is not implemented in the IA-64 backend yet, so
     // default to aborting panics (Phase 5 lifts this). See rust_bringup.html.
     base.panic_strategy = PanicStrategy::Abort;
+    // The IA-64 LLVM backend has no integrated assembler (no MC object writer), so
+    // rustc emits assembly and shells out to GNU `as`. Program defaults to
+    // `ia64-unknown-linux-gnu-as` from PATH; override with `-Cassembler=`.
+    base.need_external_assembler = true;
 
     Target {
         llvm_target: "ia64-unknown-linux-gnu".into(),
