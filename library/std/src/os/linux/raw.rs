@@ -237,6 +237,7 @@ mod arch {
     target_arch = "mips64r6",
     target_arch = "s390x",
     target_arch = "sparc64",
+    target_arch = "ia64",
     target_arch = "riscv64",
     target_arch = "riscv32"
 ))]

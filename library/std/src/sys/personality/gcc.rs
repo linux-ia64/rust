@@ -80,6 +80,9 @@ const UNWIND_DATA_REG: (i32, i32) = (6, 7); // R6, R7
 #[cfg(any(target_arch = "sparc", target_arch = "sparc64"))]
 const UNWIND_DATA_REG: (i32, i32) = (24, 25); // I0, I1
 
+#[cfg(target_arch = "ia64")]
+const UNWIND_DATA_REG: (i32, i32) = (15, 16); // r15, r16 (EH_RETURN_DATA_REGNO)
+
 #[cfg(target_arch = "hexagon")]
 const UNWIND_DATA_REG: (i32, i32) = (0, 1); // R0, R1
 

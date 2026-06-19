@@ -28,6 +28,18 @@ cfg_select! {
             core::intrinsics::abort()
         }
     }
+    target_arch = "ia64" => {
+        // IA-64 unwinds via native table-based info (.IA_64.unwind), not DWARF
+        // CFI, and EH is not yet implemented (panic=abort only -- Phase 5). The
+        // generic `gcc` personality decodes DWARF LSDA pointers via
+        // _Unwind_Get{Text,Data}RelBase, which don't exist in ia64 libgcc_s /
+        // libunwind. Until native ia64 EH lands, provide an aborting stub like
+        // the msvc/wasm cases above.
+        #[lang = "eh_personality"]
+        fn rust_eh_personality() {
+            core::intrinsics::abort()
+        }
+    }
     any(
         all(target_family = "windows", target_env = "gnu"),
         target_os = "psp",
