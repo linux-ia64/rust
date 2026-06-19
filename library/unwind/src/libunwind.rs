@@ -69,6 +69,11 @@ pub const unwinder_private_data_size: usize = 2;
 #[cfg(any(target_arch = "sparc", target_arch = "sparc64"))]
 pub const unwinder_private_data_size: usize = 2;
 
+// IA-64: gcc unwind.h uses the standard Itanium ABI _Unwind_Exception with
+// private_1/private_2 (2 words), non-SEH.
+#[cfg(target_arch = "ia64")]
+pub const unwinder_private_data_size: usize = 2;
+
 #[cfg(any(target_arch = "riscv64", target_arch = "riscv32"))]
 pub const unwinder_private_data_size: usize = 2;
 
