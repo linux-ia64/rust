@@ -1,4 +1,4 @@
-use crate::spec::{Arch, PanicStrategy, Target, TargetMetadata, base};
+use crate::spec::{Arch, PanicStrategy, Target, TargetMetadata, base, cvs};
 
 pub(crate) fn target() -> Target {
     let mut base = base::linux_gnu::opts();
@@ -10,6 +10,12 @@ pub(crate) fn target() -> Target {
     // rustc emits assembly and shells out to GNU `as`. Program defaults to
     // `ia64-unknown-linux-gnu-as` from PATH; override with `-Cassembler=`.
     base.need_external_assembler = true;
+    // GNU `as` for IA-64 defaults to "auto" template mode, which re-bundles
+    // instructions and *ignores* the explicit stop bits (`;;`) the backend
+    // emits — corrupting dependency ordering (and tripping a symbols.c assert).
+    // `-x` selects explicit mode so our bundling/stops are honored, exactly as
+    // clang's IA-64 path drives `as`.
+    base.asm_args = cvs!["-x"];
 
     Target {
         llvm_target: "ia64-unknown-linux-gnu".into(),
