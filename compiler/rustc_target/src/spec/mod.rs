@@ -2751,6 +2751,10 @@ impl TargetOptions {
         add_link_args(&mut self.pre_link_args, flavor, args);
     }
 
+    fn add_late_link_args(&mut self, flavor: LinkerFlavor, args: &[&'static str]) {
+        add_link_args(&mut self.late_link_args, flavor, args);
+    }
+
     fn update_from_cli(&mut self) {
         self.linker_flavor = LinkerFlavor::from_cli_json(
             self.linker_flavor_json,

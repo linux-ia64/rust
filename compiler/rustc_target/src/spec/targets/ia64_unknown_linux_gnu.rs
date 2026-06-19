@@ -1,8 +1,17 @@
-use crate::spec::{Arch, PanicStrategy, Target, TargetMetadata, base, cvs};
+use crate::spec::{Arch, Cc, LinkerFlavor, Lld, PanicStrategy, Target, TargetMetadata, base, cvs};
 
 pub(crate) fn target() -> Target {
     let mut base = base::linux_gnu::opts();
     base.max_atomic_width = Some(64);
+    // The IA-64 GNU `as`/`ld` is the old ia64-only binutils (dropped upstream),
+    // whose `ld` is a strict single-pass-over-archives linker. rustc injects the
+    // panic runtime (panic_abort) to the LEFT of libstd, but libstd has a
+    // backward reference into it (__rust_start_panic / __rust_panic_cleanup, both
+    // #[rustc_std_internal_symbol]); a single-pass ld can't resolve that. Bracket
+    // the whole object/rlib/native-lib span in --start-group/--end-group so ld
+    // iterates the archives to a fixpoint.
+    base.add_pre_link_args(LinkerFlavor::Gnu(Cc::Yes, Lld::No), &["-Wl,--start-group"]);
+    base.add_late_link_args(LinkerFlavor::Gnu(Cc::Yes, Lld::No), &["-Wl,--end-group"]);
     // EH landing-pad lowering is not implemented in the IA-64 backend yet, so
     // default to aborting panics (Phase 5 lifts this). See rust_bringup.html.
     base.panic_strategy = PanicStrategy::Abort;
