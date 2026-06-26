@@ -94,3 +94,7 @@ codegen-units = 1
 [patch.crates-io]
 # IA-64 specific libc
 libc = { git = "https://github.com/linux-ia64/rust-libc", tag = "ia64-0.2.185" }
+# IA-64 specific object fork (adds Architecture::Ia64 / EM_IA_64).
+# Must mirror library/Cargo.toml so the compiler itself (rustc_target,
+# rustc_codegen_ssa) can build native EM_IA_64 metadata objects.
+object = { git = "https://github.com/linux-ia64/rust-object", tag = "ia64-0.37.3" }

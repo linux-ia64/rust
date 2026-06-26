@@ -2713,8 +2713,7 @@ dependencies = [
 [[package]]
 name = "object"
 version = "0.37.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff76201f031d8863c38aa7f905eca4f53abbfa15f609db4277d44cd8938f33fe"
+source = "git+https://github.com/linux-ia64/rust-object?tag=ia64-0.37.3#1c460647dc5e1c5389cec8c41f5d566985773c46"
 dependencies = [
  "crc32fast",
  "flate2",
