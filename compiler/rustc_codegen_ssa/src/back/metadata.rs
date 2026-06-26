@@ -396,6 +396,11 @@ pub(super) fn elf_e_flags(architecture: Architecture, sess: &Session) -> u32 {
                 _ => EF_PPC64_ABI_UNKNOWN,
             }
         }
+        Architecture::Ia64 => {
+            // IA-64 LP64 objects set EF_IA_64_ABI64; GNU ld refuses to mix
+            // objects with and without this flag. Match what gcc emits.
+            elf::EF_IA_64_ABI64
+        }
         _ => 0,
     }
 }

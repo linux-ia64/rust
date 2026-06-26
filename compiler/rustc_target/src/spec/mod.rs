@@ -3833,11 +3833,8 @@ impl Target {
             Arch::LoongArch64 => (Architecture::LoongArch64, None),
             Arch::CSky => (Architecture::Csky, None),
             Arch::Arm64EC => (Architecture::Aarch64, Some(object::SubArchitecture::Arm64EC)),
-            // IA-64: the `object` crate has no `Architecture::Ia64` variant, so we
-            // cannot build a native metadata object here. Phase 3 (rlibs) will need
-            // `object` patched to add EM_IA_64 (=50). See rust_bringup.html.
-            Arch::IA64
-            | Arch::AmdGpu
+            Arch::IA64 => (Architecture::Ia64, None),
+            Arch::AmdGpu
             | Arch::Nvptx64
             | Arch::SpirV
             | Arch::Wasm32
