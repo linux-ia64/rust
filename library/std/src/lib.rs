@@ -255,7 +255,10 @@
 #![allow(unused_features)]
 //
 // Features:
-#![cfg_attr(test, feature(internal_output_capture, print_internals, update_panic_count, rt))]
+#![cfg_attr(
+    test,
+    feature(internal_output_capture, print_internals, super_let, update_panic_count, rt)
+)]
 #![cfg_attr(
     all(target_vendor = "fortanix", target_env = "sgx"),
     feature(slice_index_methods, coerce_unsized, sgx_platform)
@@ -471,9 +474,7 @@ extern crate std as realstd;
 
 // The standard macros that are not built-in to the compiler.
 #[macro_use]
-#[doc(hidden)]
-#[unstable(feature = "std_internals", issue = "none")]
-pub mod macros;
+mod macros;
 
 // The runtime entry point and a few unstable public functions used by the
 // compiler
@@ -538,7 +539,7 @@ pub use core::option;
 pub use core::pin;
 #[stable(feature = "rust1", since = "1.0.0")]
 pub use core::ptr;
-#[stable(feature = "new_range_api", since = "CURRENT_RUSTC_VERSION")]
+#[stable(feature = "new_range_api", since = "1.96.0")]
 pub use core::range;
 #[stable(feature = "rust1", since = "1.0.0")]
 pub use core::result;
@@ -731,7 +732,7 @@ pub use core::{
     assert_eq, assert_ne, debug_assert, debug_assert_eq, debug_assert_ne, r#try, unimplemented,
     unreachable, write, writeln,
 };
-#[stable(feature = "assert_matches", since = "1.95.0")]
+#[stable(feature = "assert_matches", since = "1.96.0")]
 pub use core::{assert_matches, debug_assert_matches};
 
 // Re-export unstable derive macro defined through core.

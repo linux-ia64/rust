@@ -27,9 +27,6 @@ RUN apt-get update && apt-get build-dep -y clang llvm && apt-get install -y --no
   g++-9-arm-linux-gnueabi \
   g++-11-riscv64-linux-gnu
 
-RUN apt-key adv --batch --yes --keyserver keyserver.ubuntu.com --recv-keys 74DA7924C5513486
-RUN add-apt-repository -y 'deb https://apt.dilos.org/dilos dilos2 main'
-
 ENV \
     AR_x86_64_unknown_fuchsia=x86_64-unknown-fuchsia-ar \
     CC_x86_64_unknown_fuchsia=x86_64-unknown-fuchsia-clang \
@@ -68,6 +65,8 @@ ENV \
 
 WORKDIR /build
 COPY scripts/musl.sh /build
+COPY scripts/musl-cve-2026-6042.diff /build/
+COPY scripts/musl-cve-2026-40200.diff /build/
 RUN env \
     CC=arm-linux-gnueabi-gcc-9 CFLAGS="-march=armv7-a" \
     CXX=arm-linux-gnueabi-g++-9 CXXFLAGS="-march=armv7-a" \

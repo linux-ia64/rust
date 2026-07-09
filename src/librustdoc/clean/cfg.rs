@@ -545,7 +545,7 @@ fn human_readable_target_arch(os: Symbol) -> Option<&'static str> {
     Some(match arch {
         // tidy-alphabetical-start
         AArch64 => "AArch64",
-        AmdGpu => "AMG GPU",
+        AmdGpu => "AMD GPU",
         Arm => "ARM",
         Arm64EC => "ARM64EC",
         Avr => "AVR",
