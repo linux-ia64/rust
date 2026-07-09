@@ -164,11 +164,11 @@ macro_rules! assert_ne {
 /// assert_matches!(a, Some(x) if x > 100);
 /// // assert_matches!(a, Some(x) if x < 100); // panics
 /// ```
-#[stable(feature = "assert_matches", since = "1.95.0")]
+#[stable(feature = "assert_matches", since = "1.96.0")]
 #[allow_internal_unstable(panic_internals)]
 #[rustc_macro_transparency = "semiopaque"]
 pub macro assert_matches {
-    ($left:expr, $(|)? $( $pattern:pat_param )|+ $( if $guard: expr )? $(,)?) => {
+    ($left:expr, $(|)? $( $pattern:pat_param )|+ $( if $guard: expr )? $(,)?) => {{
         match $left {
             $( $pattern )|+ $( if $guard )? => {}
             ref left_val => {
@@ -179,8 +179,8 @@ pub macro assert_matches {
                 );
             }
         }
-    },
-    ($left:expr, $(|)? $( $pattern:pat_param )|+ $( if $guard: expr )?, $($arg:tt)+) => {
+    }},
+    ($left:expr, $(|)? $( $pattern:pat_param )|+ $( if $guard: expr )?, $($arg:tt)+) => {{
         match $left {
             $( $pattern )|+ $( if $guard )? => {}
             ref left_val => {
@@ -191,7 +191,7 @@ pub macro assert_matches {
                 );
             }
         }
-    },
+    }},
 }
 
 /// Selects code at compile-time based on `cfg` predicates.
@@ -229,6 +229,7 @@ pub macro assert_matches {
 /// };
 /// ```
 #[stable(feature = "cfg_select", since = "1.95.0")]
+#[doc(alias = "cfg_if", alias = "cfg-if")]
 #[rustc_diagnostic_item = "cfg_select"]
 #[rustc_builtin_macro]
 pub macro cfg_select($($tt:tt)*) {
@@ -391,7 +392,7 @@ macro_rules! debug_assert_ne {
 /// debug_assert_matches!(a, Some(x) if x > 100);
 /// // debug_assert_matches!(a, Some(x) if x < 100); // panics
 /// ```
-#[stable(feature = "assert_matches", since = "1.95.0")]
+#[stable(feature = "assert_matches", since = "1.96.0")]
 #[allow_internal_unstable(assert_matches)]
 #[rustc_macro_transparency = "semiopaque"]
 pub macro debug_assert_matches($($arg:tt)*) {

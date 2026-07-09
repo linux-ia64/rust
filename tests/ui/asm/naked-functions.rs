@@ -3,15 +3,21 @@
 //@ ignore-spirv
 //@ reference: attributes.codegen.naked.body
 
-#![feature(asm_unwind, linkage, rustc_attrs)]
+#![feature(asm_unwind, linkage, rustc_attrs, cfg_target_object_format)]
 #![crate_type = "lib"]
 
-use std::arch::{asm, naked_asm};
+use std::arch::{asm, global_asm, naked_asm};
 
 #[unsafe(naked)]
 pub extern "C" fn inline_asm_macro() {
     unsafe { asm!("", options(raw)) };
     //~^ERROR the `asm!` macro is not allowed in naked functions
+}
+
+#[unsafe(naked)]
+pub extern "C" fn global_asm_macro() {
+    //~^ERROR naked functions must contain a single `naked_asm!` invocation
+    global_asm!("");
 }
 
 #[repr(C)]
@@ -200,7 +206,10 @@ pub extern "C" fn compatible_must_use_attributes() -> u64 {
 }
 
 #[export_name = "exported_function_name"]
-#[link_section = ".custom_section"]
+#[link_section = cfg_select!(
+    target_object_format = "mach-o" =>  "__TEXT,__custom",
+    _ => ".custom",
+)]
 #[unsafe(naked)]
 pub extern "C" fn compatible_ffi_attributes_1() {
     naked_asm!("", options(raw));
