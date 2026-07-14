@@ -5,8 +5,11 @@
 // "Result Return"; matches Clang's `IA64ABIInfo::classifyArgumentType` /
 // `classifyReturnType` (`clang/lib/CodeGen/Targets/IA64.cpp`).
 //
-// Scalars occupy one output GR (extended to 64 bits) or, for floating point,
-// one FP register (handled by the backend's `CC_IA64*` custom hooks). Small
+// Scalars occupy one output GR or, for floating point, one FP register
+// (handled by the backend's `CC_IA64*` custom hooks). A scalar narrower than
+// its slot is *not* sign-/zero-extended as an argument, but *is* as a return
+// value -- the two directions genuinely differ; see `classify_arg` and
+// `classify_ret`. Small
 // aggregates (structs/unions/enums) are passed *by value*, flattened into
 // consecutive 64-bit integer slots -- there is no hidden-pointer form for an
 // aggregate that fits in the eight parameter slots (<= 64 bytes). A
@@ -56,6 +59,9 @@ where
     C: HasDataLayout,
 {
     if !ret.layout.is_aggregate() {
+        // Unlike an argument slot, a returned integer narrower than 32 bits
+        // "must be zero-filled (if unsigned) or sign-extended (if signed) to
+        // at least 32 bits" (psABI §8.6), so the extension is warranted here.
         ret.extend_integer_width_to(64);
         return;
     }
@@ -86,7 +92,19 @@ where
     }
 
     if !arg.layout.is_aggregate() {
-        arg.extend_integer_width_to(64);
+        // No extension. Argument slots are LSB-aligned, and a scalar narrower
+        // than its slot is "padded on the left; the padding is undefined"
+        // (psABI §8.5.1); so the upper bits of an incoming sub-64-bit
+        // argument carry no guarantee, and marking it `ZExt`/`SExt` (promising
+        // LLVM they are a real extension of the value) is unsound: the callee
+        // would then use the full register and observe the padding. GCC does
+        // exercise that freedom; it stores an 8-bit argument into a memory
+        // slot with a plain `st1`, leaving the other seven bytes stale.
+        //
+        // The backend's `CCPromoteToType<i64>` still gives the argument its
+        // own 64-bit slot; without an extension attribute LLVM narrows the
+        // value at each use (`ld1` from a memory slot, `zxt1`/`sxt1` off an
+        // incoming register) instead of trusting the padding.
         *offset += arg.layout.size.align_to(Align::EIGHT);
         return;
     }
