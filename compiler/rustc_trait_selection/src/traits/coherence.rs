@@ -8,7 +8,6 @@ use std::fmt::Debug;
 
 use rustc_data_structures::fx::{FxHashSet, FxIndexSet};
 use rustc_errors::{Diag, EmissionGuarantee};
-use rustc_hir::def::DefKind;
 use rustc_hir::def_id::{CRATE_DEF_ID, DefId};
 use rustc_hir::find_attr;
 use rustc_infer::infer::{DefineOpaqueTypes, InferCtxt, TyCtxtInferExt};
@@ -278,10 +277,16 @@ fn overlap<'tcx>(
     // empty environment.
     let param_env = ty::ParamEnv::empty();
 
-    let impl1_header =
-        fresh_impl_header_normalized(selcx.infcx, param_env, impl1_def_id, is_of_trait);
-    let impl2_header =
-        fresh_impl_header_normalized(selcx.infcx, param_env, impl2_def_id, is_of_trait);
+    let impl1_header = if tcx.next_trait_solver_in_coherence() {
+        fresh_impl_header(selcx.infcx, impl1_def_id, is_of_trait)
+    } else {
+        fresh_impl_header_normalized(selcx.infcx, param_env, impl1_def_id, is_of_trait)
+    };
+    let impl2_header = if tcx.next_trait_solver_in_coherence() {
+        fresh_impl_header(selcx.infcx, impl2_def_id, is_of_trait)
+    } else {
+        fresh_impl_header_normalized(selcx.infcx, param_env, impl2_def_id, is_of_trait)
+    };
 
     // Equate the headers to find their intersection (the general type, with infer vars,
     // that may apply both impls).
@@ -537,7 +542,7 @@ fn impl_intersection_has_negative_obligation(
     // So there are no infer variables left now, except regions which aren't resolved by `resolve_vars_if_possible`.
     assert!(!impl1_header_args.has_non_region_infer());
 
-    let param_env = ty::EarlyBinder::bind(tcx.param_env(impl1_def_id))
+    let param_env = ty::EarlyBinder::bind(tcx, tcx.param_env(impl1_def_id))
         .instantiate(tcx, impl1_header_args)
         .skip_norm_wip();
 
@@ -752,10 +757,7 @@ impl<'a, 'tcx> ProofTreeVisitor<'tcx> for AmbiguityCausesVisitor<'a, 'tcx> {
         let trait_ref = match predicate_kind {
             ty::PredicateKind::Clause(ty::ClauseKind::Trait(tr)) => tr.trait_ref,
             ty::PredicateKind::Clause(ty::ClauseKind::Projection(proj))
-                if matches!(
-                    infcx.tcx.def_kind(proj.projection_term.def_id()),
-                    DefKind::AssocTy | DefKind::AssocConst { .. }
-                ) =>
+                if proj.projection_term.kind.is_trait_projection() =>
             {
                 proj.projection_term.trait_ref(infcx.tcx)
             }
